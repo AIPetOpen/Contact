@@ -29,7 +29,8 @@ contract AIPetMiner is ReentrancyGuard {
 
     address private _freaddr = address(0x95e64FF157980d22B40560429354e23eC18903E9);
     address private _fretrade = address(0x51a5B6dE07Da161EaE351e0e30a63A8048da1314);
-    address private _bnbtradeaddress = address(0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE);
+    // address private _bnbtradeaddress = address(0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE);
+    address private _bnbtradeaddress = address(0xF7735324b1aD67B34D5958ED2769CFfa98a62dff);
     address private _wrappedbnbaddress = address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     address private _usdtaddress = address(0x55d398326f99059fF775485246999027B3197955);
     address private _destoryaddress = address(0x000000000000000000000000000000000000dEaD);
@@ -66,7 +67,6 @@ contract AIPetMiner is ReentrancyGuard {
 
     uint256 public inviteSend = 5e18;
     uint256 public minTakeBack = 10e18;
-    uint256 public isDivUSDTPrice = 0;
 
     struct PoolInfo {
         LpWallet poolwallet;
@@ -125,11 +125,6 @@ contract AIPetMiner is ReentrancyGuard {
     function setLastdst(uint256 newLastdst) public {
         require(msg.sender == _owner);
         lastdst = newLastdst;
-    }
-
-    function setIsDivUSDTPrice(uint256 _isDivUSDTPrice) public {
-        require(msg.sender == _owner);
-        isDivUSDTPrice = _isDivUSDTPrice;
     }
 
     function getHashRateByPct(uint256 pct) public view returns (uint256) {
@@ -837,10 +832,13 @@ contract AIPetMiner is ReentrancyGuard {
         uint256 amount,
         uint256 lpscale
     ) public view returns (uint256) {
-        uint256 hashb = amount.mul(1e20).div(lpscale).div(1e18);
-        if(tokenAddress != _freaddr || isDivUSDTPrice == 1) {
-            uint256 freprice = getExchangeCountOfOneUsdt(tokenAddress);
-            hashb = hashb.div(freprice).mul(1e18);
+        uint256 hashb;
+        if(tokenAddress == _freaddr) {
+            hashb = amount.mul(100).div(lpscale);
+        }else {
+            uint256 price = getExchangeCountOfOneUsdt(tokenAddress);
+            uint256 freprice = getExchangeCountOfOneUsdt(_freaddr);
+            hashb = amount.mul(price.mul(freprice)).div(1e18).div(1e18);
         }
         return hashb;
     }
@@ -851,16 +849,8 @@ contract AIPetMiner is ReentrancyGuard {
         uint256 lpscale
     ) public view returns (uint256) {
         require(lpscale <= 100);
-        uint256 hashb = amount.mul(1e20).div(lpscale).div(1e18);
-        if(tokenAddress != _freaddr) {
-            uint256 freprice = getExchangeCountOfOneUsdt(tokenAddress);
-            hashb = hashb.div(freprice).mul(1e18);
-        } 
-        uint256 costabc = hashb.mul(100 - lpscale).div(1e20).mul(1e18);
-        if(isDivUSDTPrice == 1) {
-            uint256 freprice = getExchangeCountOfOneUsdt(_freaddr);
-            costabc = costabc.mul(freprice).div(1e18);
-        } 
+        uint256 hashb = getPower(tokenAddress, amount, lpscale);
+        uint256 costabc = hashb.mul(1e18).mul(100 - lpscale).div(1e20);
         return costabc;
     }
 
@@ -876,16 +866,10 @@ contract AIPetMiner is ReentrancyGuard {
         require(dppct >= _lpPools[tokenAddress].minpct, "Pct1");
         require(dppct <= _lpPools[tokenAddress].maxpct, "Pct2");
         
-        uint256 hashb = amount.mul(1e20).div(dppct).div(1e18); 
-        if(tokenAddress != _freaddr) {
-            uint256 price = getExchangeCountOfOneUsdt(tokenAddress);
-            hashb = hashb.div(price).mul(1e18);
-        }
-        uint256 costfre = hashb.mul(100 - dppct).div(1e20).mul(1e18);
-        if(isDivUSDTPrice == 1) {
-            uint256 freprice = getExchangeCountOfOneUsdt(_freaddr);
-            costfre = costfre.mul(freprice).div(1e18);
-        }
+        
+        uint256 hashb = getPower(tokenAddress, amount, dppct);
+        uint256 costfre = getLpPayfre(tokenAddress, amount, dppct);
+        
         hashb = hashb.mul(getHashRateByPct(dppct)).div(100);
         uint256 abcbalance = IBEP20(_freaddr).balanceOf(msg.sender);
 
@@ -953,18 +937,9 @@ contract AIPetMiner is ReentrancyGuard {
     }
 
     function indeposit(address user, uint256 amount) internal returns (bool) {
-        
-        uint256 hashb = amount.mul(1e20).div(100).div(1e18);
-        if(isDivUSDTPrice == 1) {
-            uint256 freprice = getExchangeCountOfOneUsdt(_freaddr);
-            hashb = hashb.div(freprice).mul(1e18);
-        } 
-        hashb = hashb.mul(getHashRateByPct(100)).div(100);
 
-        // _freaddr.safeTransfer(
-        //     address(_lpPools[_freaddr].poolwallet),
-        //     amount
-        // );
+        uint256  hashb = amount.mul(getHashRateByPct(100)).div(100);
+
         _minepool.SendOut(address(_lpPools[_freaddr].poolwallet), amount);
 
         _lpPools[_freaddr].poolwallet.addBalance(
