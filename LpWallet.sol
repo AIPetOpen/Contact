@@ -30,9 +30,9 @@ contract LpWallet {
         address tokena,
         address tokenb,
         address feeowner,
-        address owner //Create by fremain
+        address owner //Create by main
     ) {
-        _MainContract = msg.sender; // The fremain CONTRACT
+        _MainContract = msg.sender; // The main CONTRACT
         lptoken = tokena;
         fretoken = tokenb;
         _feeowner = feeowner;
@@ -54,16 +54,11 @@ contract LpWallet {
         uint256 amounta,
         uint256 amountb
     ) public {
-        require(_MainContract == msg.sender); //Only fremain can do this
+        require(_MainContract == msg.sender); //Only main can do this
         _balancesa[user] = _balancesa[user].add(amounta);
         _balancesb[user] = _balancesb[user].add(amountb);
         tvlBalancea = tvlBalancea.add(amounta);
         tvlBalanceb = tvlBalanceb.add(amountb);
-    }
-
-    function resetTo(address newcontract) public {
-        require(msg.sender == _owner);
-        _MainContract = newcontract;
     }
 
     function decBalance(
@@ -71,7 +66,7 @@ contract LpWallet {
         uint256 amounta,
         uint256 amountb
     ) public {
-        require(_MainContract == msg.sender); //Only fremain can do this
+        require(_MainContract == msg.sender); //Only main can do this
         _balancesa[user] = _balancesa[user].sub(amounta);
         _balancesb[user] = _balancesb[user].sub(amountb);
         tvlBalancea = tvlBalancea.sub(amounta);
@@ -83,32 +78,9 @@ contract LpWallet {
         uint256 amounta,
         uint256 amountb
     ) public {
-        require(_MainContract == msg.sender); //Only fremain can do this
+        require(_MainContract == msg.sender); //Only main can do this
         _balancesa[to] = _balancesa[to].sub(amounta);
         _balancesb[to] = _balancesb[to].sub(amountb);
-        tvlBalancea = tvlBalancea.sub(amounta);
-        tvlBalanceb = tvlBalanceb.sub(amountb);
-        if (lptoken != address(2)) //BNB
-        {
-            uint256 mainfee = amounta.div(100);
-            lptoken.safeTransfer(to, amounta.sub(mainfee));
-            lptoken.safeTransfer(_feeowner, mainfee);
-            if (amountb >= 100) {
-                uint256 fee = amountb.div(100); //fee 1%
-                fretoken.safeTransfer(to, amountb.sub(fee));
-                IBEP20(fretoken).burn(fee);
-            } else {
-                fretoken.safeTransfer(to, amountb);
-            }
-        }
-    }
-
-    function TakeBack1(
-        address to,
-        uint256 amounta,
-        uint256 amountb
-    ) public {
-        require(_MainContract == msg.sender); //Only fremain can do this
         tvlBalancea = tvlBalancea.sub(amounta);
         tvlBalanceb = tvlBalanceb.sub(amountb);
         if (lptoken != address(2)) //BNB

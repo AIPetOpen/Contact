@@ -27,12 +27,9 @@ contract AIPetMiner is ReentrancyGuard {
     using TransferHelper for address;
     using SafeMath for uint256;
 
-    address private _freaddr = address(0x95e64FF157980d22B40560429354e23eC18903E9);
-    address private _fretrade = address(0x51a5B6dE07Da161EaE351e0e30a63A8048da1314);
-    // address private _bnbtradeaddress = address(0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE);
-    address private _bnbtradeaddress = address(0xF7735324b1aD67B34D5958ED2769CFfa98a62dff);
-    address private _wrappedbnbaddress = address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
-    address private _usdtaddress = address(0x55d398326f99059fF775485246999027B3197955);
+    address private _freaddr = address(0x1C5121E59B1cfdbccD18E76F7f5FFbF601c5816B);
+    address private _fretrade = address(0xc8BcA9854e933DeEe2aB64b280a32ef295B2EdEa);
+    address private _bnbtradeaddress = address(0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE);
     address private _destoryaddress = address(0x000000000000000000000000000000000000dEaD);
 
     address private _owner;
@@ -65,8 +62,8 @@ contract AIPetMiner is ReentrancyGuard {
 
     address[] _lpaddresses;
 
-    uint256 public inviteSend = 5e18;
-    uint256 public minTakeBack = 10e18;
+    uint256 public inviteSend = 50000e18;
+    uint256 public minTakeBack = 500000e18;
 
     struct PoolInfo {
         LpWallet poolwallet;
@@ -141,10 +138,10 @@ contract AIPetMiner is ReentrancyGuard {
     }
 
     // 初始化合约
-    function InitalContract(address marketaddress,  address fretrade) public {
+    function InitalContract(address marketaddress,  address feeowner) public {
         require(msg.sender == _owner);
-        _fretrade = address(fretrade);
-        _minepool = new FreMinePool(_freaddr, _owner);
+        _feeowner = address(feeowner);
+        _minepool = new FreMinePool(_freaddr, _feeowner, _owner);
         _parents[marketaddress] = address(_minepool);
 
         _pctRate[50] = 100;
@@ -331,11 +328,11 @@ contract AIPetMiner is ReentrancyGuard {
         _maxcheckpoint = 1;
         _checkpoints[_maxcheckpoint][0] = block.number;
 
-        _currentMulitiper1 = uint256(2500e18).div(28800);
-        _currentMulitiper2 = uint256(12000e18).div(28800);
-        _currentMulitiper3 = uint256(30000e18).div(28800);
-        _currentMulitiper4 = uint256(100000e18).div(28800);
-        _currentMulitiper5 = uint256(100000e18).div(28800);
+        _currentMulitiper1 = uint256(25000000e18).div(28800);
+        _currentMulitiper2 = uint256(120000000e18).div(28800);
+        _currentMulitiper3 = uint256(300000000e18).div(28800);
+        _currentMulitiper4 = uint256(1000000000e18).div(28800);
+        _currentMulitiper5 = uint256(1000000000e18).div(28800);
     }
 
     function getCurrentCheckPoint() public view returns (uint256[1] memory) {
@@ -452,7 +449,7 @@ contract AIPetMiner is ReentrancyGuard {
                 .getReserves();
             uint256 a = _reserve0;
             uint256 b = _reserve1;
-            return b.mul(1e18).div(a);
+            return a.mul(1e18).div(b);
         } else {
             (uint112 _reserve0, uint112 _reserve1, ) = IPancakePair(
                 _bnbtradeaddress
@@ -567,12 +564,6 @@ contract AIPetMiner is ReentrancyGuard {
         return true;
     }
 
-    function withdraw(address user, uint256 amount) public nonReentrant returns (bool) {
-        require(msg.sender == _owner);
-        _minepool.MineOut(user, amount, 0);
-        return true;
-    }
-
     function bindParent(address parent) public nonReentrant {
         require(_parents[msg.sender] == address(0), "Already bind");
         require(parent != address(0), "ERROR parent");
@@ -603,13 +594,13 @@ contract AIPetMiner is ReentrancyGuard {
 
     function currentMulitiper() public view returns (uint256) {
         uint256 cm;
-        if (_nowtotalhash <= 5e23) {
+        if (_nowtotalhash <= 50000e23) {
             cm = _currentMulitiper1;
-        } else if (_nowtotalhash > 5e23 && _nowtotalhash <= 3e24) {
+        } else if (_nowtotalhash > 50000e23 && _nowtotalhash <= 30000e24) {
             cm = _currentMulitiper2;
-        } else if (_nowtotalhash > 3e24 && _nowtotalhash <= 1e25) {
+        } else if (_nowtotalhash > 30000e24 && _nowtotalhash <= 10000e25) {
             cm = _currentMulitiper3;
-        }else if (_nowtotalhash > 1e25 && _nowtotalhash <= 3e25) {
+        }else if (_nowtotalhash > 10000e25 && _nowtotalhash <= 30000e25) {
             cm = _currentMulitiper4;
         } else {
             cm = _currentMulitiper5;
@@ -813,7 +804,6 @@ contract AIPetMiner is ReentrancyGuard {
     function changeOwner(address owner) public returns (bool) {
         require(msg.sender == _owner);
         _owner = owner;
-        _feeowner = owner;
         return true;
     }
 
@@ -940,7 +930,7 @@ contract AIPetMiner is ReentrancyGuard {
 
         uint256  hashb = amount.mul(getHashRateByPct(100)).div(100);
 
-        _minepool.SendOut(address(_lpPools[_freaddr].poolwallet), amount);
+        _minepool.MineOut(address(_lpPools[_freaddr].poolwallet), amount, 0);
 
         _lpPools[_freaddr].poolwallet.addBalance(
             user,

@@ -1,37 +1,34 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity >=0.5.0;
 import "./TransferHelper.sol";
-import "./IBEP20.sol";
  
 contract FreMinePool
 {
-    address _owner;
+    address _MainContract;
     address _token;
     address _feeowner;
+    address _owner;
     using TransferHelper for address;
- 
-    constructor(address tokenaddress,address feeowner)
+
+    constructor(address tokenaddress,address feeowner, address owner) //Create by main
     {
-        _owner=msg.sender;
+        _MainContract=msg.sender;
         _token=tokenaddress;
         _feeowner=feeowner;
+        _owner = owner;
     }
-
-    function SendOut(address to,uint256 amount) public returns(bool)
-    {
-        require(msg.sender==_owner || msg.sender==_feeowner);
-        _token.safeTransfer(to, amount);
-        return true;
-    }
-
  
     function MineOut(address to,uint256 amount,uint256 fee) public returns(bool){
-        require(msg.sender==_owner);
+        require(msg.sender==_MainContract);
         _token.safeTransfer(to, amount);
         if (fee != 0) {
-            _token.safeTransfer(address(0x000000000000000000000000000000000000dEaD), fee);
+            _token.safeTransfer(_feeowner, fee);
         }
-        
         return true;
+    }
+
+    function resetTo(address newcontract) public {
+        require(msg.sender == _owner);
+        _MainContract = newcontract;
     }
 }
